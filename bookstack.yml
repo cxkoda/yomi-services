@@ -1,0 +1,27 @@
+version: '3'
+
+services:
+
+  db:
+    image: linuxserver/mariadb
+    env_file: ${CONFIG}/bookstack/bookstack.env
+    volumes:
+      - ${DATA}/bookstack/db:/config
+    restart: unless-stopped
+
+  app:
+    image: linuxserver/bookstack
+    env_file: ${CONFIG}/bookstack/bookstack.env
+    container_name: bookstack
+    volumes:
+      - ${DATA}/bookstack/app:/config
+    networks:
+      - frontend
+      - default
+    restart: unless-stopped
+    depends_on:
+      - db
+
+networks:
+  frontend:
+    external: true
