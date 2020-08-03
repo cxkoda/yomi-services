@@ -10,9 +10,11 @@ services:
       - PGID=1000
       - TZ=Europe/London
       - URL=yomi.eu
-      - SUBDOMAINS=whoami,bookstack,
-      - VALIDATION=http
-      #- DNSPLUGIN=cloudflare #optional
+      #- SUBDOMAINS=whoami,bookstack,nextcloud,
+      - SUBDOMAINS=wildcard
+      #- VALIDATION=http
+      - VALIDATION=dns
+      - DNSPLUGIN=cloudflare #optional
       #- PROPAGATION= #optional
       #- DUCKDNSTOKEN= #optional
       #- EMAIL= #optional
@@ -20,7 +22,8 @@ services:
       #- EXTRA_DOMAINS= #optional
       #- STAGING=false #optional
     volumes:
-      - ${CONFIG}/swag/site-confs:/config/nginx/site-confs/
+      - ${CONFIG}/swag/site-confs/:/config/nginx/site-confs/
+      - ${CONFIG}/swag/dns-conf/:/config/dns-conf/
       - ${DATA}/swag:/config
     ports:
       - 443:443
