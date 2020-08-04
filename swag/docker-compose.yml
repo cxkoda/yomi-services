@@ -1,0 +1,65 @@
+version: "3.7"
+
+services:
+  swag:
+    image: linuxserver/letsencrypt
+    container_name: swag
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - PUID
+      - PGID
+      - TZ
+      - URL=${DOMAIN:?err}
+      - SUBDOMAINS
+      - VALIDATION
+      - DNSPLUGIN #optional
+      #- PROPAGATION= #optional
+      #- DUCKDNSTOKEN= #optional
+      #- EMAIL= #optional
+      #- ONLY_SUBDOMAINS=false #optional
+      #- EXTRA_DOMAINS= #optional
+      #- STAGING=false #optional
+    volumes:
+      - ./config/site-confs/:/config/nginx/site-confs/
+      - ${SECRETS}/swag_dns_conf.ini:/config/dns-conf/${DNSPLUGIN}.ini
+      - ${APPDATA}/swag:/config
+    ports:
+      - 443:443
+      - 80:80 #optional
+    restart: unless-stopped
+    networks:
+      - wan
+      - proxy
+
+  whoami:
+    image: "containous/whoami"
+    container_name: whoami
+    networks:
+      - proxy
+
+  ldap-auth:
+    image: linuxserver/ldap-auth
+    container_name: ldap-auth
+    environment:
+      - PUID
+      - PGUID
+      - TZ
+      - FERNETKEY= #optional
+      - CERTFILE= #optional
+      - KEYFILE= #optional
+    restart: unless-stopped
+    networks:
+      - proxy
+      - ldap 
+
+
+networks:
+  wan: # <== Used by the reverse proxy to connect out.
+  proxy: # <== The same network defined in Docker provider config.
+    external: true
+  default:
+    internal: true
+  ldap:
+    internal: true
+    attachable: true
