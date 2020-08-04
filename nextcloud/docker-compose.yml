@@ -1,39 +1,35 @@
----
 version: "2.1"
 services:
   nextcloud:
-    image: linuxserver/nextcloud
     container_name: nextcloud
+    image: linuxserver/nextcloud
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/London
-    env_file: ${CONFIG}/nextcloud/nextcloud.env
+      - PUID
+      - PGID
+      - TZ
+    env_file: ./nextcloud.env
     volumes:
-      - ${DATA}/nextcloud/config:/config
-      - ${DATA}/nextcloud/data:/data
+      - ${APPDATA}/nextcloud/app/config:/config
+      - ${APPDATA}/nextcloud/app/data:/data
     networks:
-      - frontend
-      - internal
+      - proxy
+      - default
     restart: unless-stopped
     depends_on:
       - nextcloud_db
 
   nextcloud_db:
+    container_name: nextcloud_db
     image: linuxserver/mariadb
-    env_file: ${CONFIG}/nextcloud/nextcloud.env
-    networks:
-      - internal
+    env_file: ./nextcloud.env
+    environment:
+      - PUID
+      - PGID
+      - TZ
     volumes:
-      - ${DATA}/nextcloud/db:/config
+      - ${APPDATA}/nextcloud/db:/config
     restart: unless-stopped
-    ports:
-      - 3308:3306
 
 networks:
-  frontend:
-    external:
-      name: ${FRONTEND}
-  internal:
-    driver: "bridge"
-
+  proxy:
+    external: true
