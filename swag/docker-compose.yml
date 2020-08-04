@@ -38,28 +38,9 @@ services:
     networks:
       - proxy
 
-  ldap-auth:
-    image: linuxserver/ldap-auth
-    container_name: ldap-auth
-    environment:
-      - PUID
-      - PGUID
-      - TZ
-      - FERNETKEY= #optional
-      - CERTFILE= #optional
-      - KEYFILE= #optional
-    restart: unless-stopped
-    networks:
-      - proxy
-      - ldap 
-
-
 networks:
   wan: # <== Used by the reverse proxy to connect out.
   proxy: # <== The same network defined in Docker provider config.
     external: true
   default:
     internal: true
-  ldap:
-    internal: true
-    attachable: true
