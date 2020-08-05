@@ -4,24 +4,24 @@ services:
 
   db:
     image: linuxserver/mariadb
-    env_file: ${CONFIG}/bookstack/bookstack.env
+    env_file: ./bookstack.env
     volumes:
-      - ${DATA}/bookstack/db:/config
+      - ${APPDATA}/bookstack/db:/config
     restart: unless-stopped
 
   app:
     image: linuxserver/bookstack
-    env_file: ${CONFIG}/bookstack/bookstack.env
+    env_file: ./bookstack.env
     container_name: bookstack
     volumes:
-      - ${DATA}/bookstack/app:/config
+      - ${APPDATA}/bookstack/app:/config
     networks:
-      - frontend
+      - proxy
       - default
     restart: unless-stopped
     depends_on:
       - db
 
 networks:
-  frontend:
+  proxy:
     external: true
