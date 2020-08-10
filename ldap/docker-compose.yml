@@ -86,4 +86,4 @@ networks:
   proxy:
     external: true
   ldap:
-    driver: bridge
+    external: true
