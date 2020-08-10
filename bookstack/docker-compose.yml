@@ -4,19 +4,35 @@ services:
 
   db:
     image: linuxserver/mariadb
-    env_file: ./bookstack.env
+    environment:
+      - MYSQL_DATABASE=${BOOKSTACK_DB_DATABASE:-bookstack}
+      - MYSQL_USER=${BOOKSTACK_DB_USER:-bookstack}
+      - MYSQL_PASSWORD=${BOOKSTACK_DB_PASSWORD:-secret}
+      - MYSQL_ROOT_PASSWORD=${BOOKSTACK_DB_ROOT_PASSWORD:-supersecret}
+      - PUID
+      - PGID
+      - TZ
     volumes:
       - ${APPDATA}/bookstack/db:/config
     restart: unless-stopped
 
   app:
     image: linuxserver/bookstack
-    env_file: ./bookstack.env
     container_name: bookstack
+    environment:
+      - DB_HOST=db
+      - DB_DATABASE=${BOOKSTACK_DB_DATABASE:-bookstack}
+      - DB_USER=${BOOKSTACK_DB_USER:-bookstack}
+      - DB_PASSWORD=${BOOKSTACK_DB_PASSWORD:-secret}
+      - APP_URL="https://bookstack.${DOMAIN:-example.org}"
+      - PUID
+      - PGID
+      - TZ
     volumes:
       - ${APPDATA}/bookstack/app:/config
     networks:
       - proxy
+      - ldap
       - default
     restart: unless-stopped
     depends_on:
@@ -25,3 +41,6 @@ services:
 networks:
   proxy:
     external: true
+  ldap:
+    external: true
+
