@@ -13,6 +13,7 @@ services:
       - ${APPDATA}/nextcloud/app/data:/data
     networks:
       - proxy
+      - ldap
       - default
     restart: unless-stopped
     depends_on:
@@ -33,3 +34,6 @@ services:
 networks:
   proxy:
     external: true
+  ldap:
+    external: true
+
