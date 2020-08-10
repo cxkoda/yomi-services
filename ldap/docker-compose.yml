@@ -1,17 +1,6 @@
 version: '3'
 
 services:
-  ldap-auth:
-    image: linuxserver/ldap-auth
-    container_name: ldap-auth
-    #environment:
-      #- FERNETKEY= #optional
-      #- CERTFILE= #optional
-      #- KEYFILE= #optional
-    networks:
-      - proxy
-    restart: unless-stopped
-
   openldap:
     image: osixia/openldap:1.4.0
     container_name: openldap
