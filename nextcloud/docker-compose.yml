@@ -15,12 +15,13 @@ services:
       - proxy
       - ldap
       - default
+    links:
+      - db:nextcloud_db
     restart: unless-stopped
     depends_on:
-      - nextcloud_db
+      - db
 
-  nextcloud_db:
-    container_name: nextcloud_db
+  db:
     image: linuxserver/mariadb
     env_file: ./nextcloud.env
     environment:
@@ -30,6 +31,40 @@ services:
     volumes:
       - ${APPDATA}/nextcloud/db:/config
     restart: unless-stopped
+
+  db-backup:
+    image: mariadb:10
+    env_file: ./nextcloud.env
+    environment:
+      - PUID
+      - PGID
+      - TZ
+      - BACKUP_FREQUENCY=${MYSQL_BACKUP_FREQUENCY:-1d}
+      - BACKUP_NUM_KEEP=${MYSQL_BACKUP_NUM_KEEP:-7}
+    volumes:
+      - ${APPDATA}/nextcloud/db-dump:/dump
+      - /etc/localtime:/etc/localtime:ro
+    entrypoint: |
+      bash -c 'bash -s <<EOF
+      trap "break;exit" SIGHUP SIGINT SIGTERM
+      sleep 10m
+      while /bin/true; do
+        mysqldump --single-transaction -h db --all-databases -u $$MYSQL_USER -p$$MYSQL_PASSWORD | gzip -c > /dump/dump_\`date +%d-%m-%Y"_"%H_%M_%S\`.sql.gz
+        (ls -t /dump/dump*.sql.gz|head -n $$BACKUP_NUM_KEEP;ls /dump/dump*.sql.gz)|sort|uniq -u|xargs -r rm
+        sleep $$BACKUP_FREQUENCY
+      done
+      EOF'
+    depends_on:
+      - db
+
+#  # Debugging
+#  adminer:
+#    image: adminer
+#    restart: always
+#    ports:
+#      - 8080:8080
+#    depends_on:
+#      - db
 
 networks:
   proxy:
