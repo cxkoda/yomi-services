@@ -1,0 +1,75 @@
+version: '3'
+
+services:
+#  app:
+#    image: afterlogic/docker-webmail-lite
+#    container_name: webmail
+#    networks:
+#      - proxy
+#    restart: unless-stopped
+
+
+  app:
+    image: roundcube/roundcubemail
+    container_name: webmail
+    environment:
+      - ROUNDCUBEMAIL_DEFAULT_HOST
+      - ROUNDCUBEMAIL_DEFAULT_PORT
+      - ROUNDCUBEMAIL_SMTP_SERVER
+      - ROUNDCUBEMAIL_SMTP_PORT
+      - ROUNDCUBEMAIL_DB_HOST=db
+      - ROUNDCUBEMAIL_DB_NAME=${ROUNDCUBE_DB_DATABASE:?err}
+      - ROUNDCUBEMAIL_DB_USER=${ROUNDCUBE_DB_USER:?err}
+      - ROUNDCUBEMAIL_DB_PASSWORD=${ROUNDCUBE_DB_PASSWORD:?err}
+      - ROUNDCUBEMAIL_SKIN=elastic
+    networks:
+      - proxy
+    restart: unless-stopped
+
+  db:
+    image: linuxserver/mariadb
+    environment:
+      - MYSQL_DATABASE=${ROUNDCUBE_DB_DATABASE:?err}
+      - MYSQL_USER=${ROUNDCUBE_DB_USER:?err}
+      - MYSQL_PASSWORD=${ROUNDCUBE_DB_PASSWORD:?err}
+      - MYSQL_ROOT_PASSWORD=${ROUNDCUBE_DB_ROOT_PASSWORD:?err}
+      - PUID
+      - PGID
+      - TZ
+    volumes:
+      - ${APPDATA}/roundcube/db:/config
+    restart: unless-stopped
+
+  db-backup:
+    image: mariadb:10
+    environment:
+      - MYSQL_DATABASE=${ROUNDCUBE_DB_DATABASE:?err}
+      - MYSQL_USER=${ROUNDCUBE_DB_USER:?err}
+      - MYSQL_PASSWORD=${ROUNDCUBE_DB_PASSWORD:?err}
+      - PUID
+      - PGID
+      - TZ
+      - BACKUP_FREQUENCY=${MYSQL_BACKUP_FREQUENCY:-1d}
+      - BACKUP_NUM_KEEP=${MYSQL_BACKUP_NUM_KEEP:-7}
+    volumes:
+      - ${APPDATA}/bookstack/db-dump:/dump
+      - /etc/localtime:/etc/localtime:ro
+    entrypoint: |
+      bash -c 'bash -s <<EOF
+      trap "break;exit" SIGHUP SIGINT SIGTERM
+      sleep 10s
+      while /bin/true; do
+        mysqldump --single-transaction -h db --all-databases -u $$MYSQL_USER -p$$MYSQL_PASSWORD | gzip -c > /dump/dump_\`date +%d-%m-%Y"_"%H_%M_%S\`.sql.gz
+        (ls -t /dump/dump*.sql.gz|head -n $$BACKUP_NUM_KEEP;ls /dump/dump*.sql.gz)|sort|uniq -u|xargs -r rm
+        sleep $$BACKUP_FREQUENCY
+      done
+      EOF'
+    depends_on:
+      - db
+
+networks:
+  proxy:
+    external: true
+  ldap:
+    external: true
+
