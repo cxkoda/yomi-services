@@ -27,6 +27,7 @@ services:
     ports:
       - 443:443
       - 80:80 #optional
+      - 8448:8448 #matrix
     restart: unless-stopped
     networks:
       - wan
