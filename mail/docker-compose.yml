@@ -1,0 +1,25 @@
+version: '2'
+services:
+  mail:
+    image: tvial/docker-mailserver:latest
+    hostname: ${MAIL_HOSTNAME}
+    domainname: ${DOMAIN}
+    container_name: mail
+    ports:
+    - "25:25"
+    - "143:143"
+    - "587:587"
+    - "993:993"
+    volumes:
+    - ${APPDATA}/mail/maildata:/var/mail
+    - ${APPDATA}/mail/mailstate:/var/mail-state
+    - ${APPDATA}/mail/maillogs:/var/log/mail
+    - ${APPDATA}/mail/config/:/tmp/docker-mailserver/
+    - ${APPDATA}/swag/etc/letsencrypt:/etc/letsencrypt
+    env_file:
+    - .env
+    - env-mailserver
+    cap_add:
+    - NET_ADMIN
+    - SYS_PTRACE
+    restart: unless-stopped
