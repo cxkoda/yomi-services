@@ -1,0 +1,77 @@
+version: '3'
+
+services:
+  synapse:
+    image: matrixdotorg/synapse:latest
+    container_name: synapse
+    environment:
+      - UID=${PUID}
+      - GID=${PGID}
+      - TZ
+# debug
+#    ports:
+#      - 8008:8008
+    volumes:
+      - ${APPDATA}/matrix/synapse:/data
+      # I move the server config to the appdata for now, since it contains keys and other private data.
+      # In the future, this should be moved back to the service folder, if it is possible to split off the sensitive info.
+      - ${APPDATA}/matrix/config/homeserver.yaml:/data/homeserver.yaml
+    networks:
+      - proxy
+      - default
+    restart: unless-stopped
+    depends_on:
+      - synapse-db
+
+
+  synapse-db:
+    image: postgres:latest
+    container_name: synapse-db
+    environment:
+      POSTGRES_USER: ${SYNAPSE_DB_USER}
+      POSTGRES_PASSWORD: ${SYNAPSE_DB_PASSWORD}
+      POSTGRES_DB: ${SYNAPSE_DB_DATABASE}
+      POSTGRES_INITDB_ARGS: "-E UTF8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - ${APPDATA}/matrix/synapse-db:/var/lib/postgresql/data
+    networks:
+      - default
+    restart: unless-stopped
+
+  pgbackups:
+    image: prodrigestivill/postgres-backup-local
+    restart: always
+    volumes:
+      - ${APPDATA}/matrix/synapse-db-backups:/backups
+    links:
+      - synapse-db:db
+    environment:
+      - POSTGRES_HOST=synapse-db
+      - POSTGRES_DB=${SYNAPSE_DB_DATABASE}
+      - POSTGRES_USER=${SYNAPSE_DB_USER}
+      - POSTGRES_PASSWORD=${SYNAPSE_DB_PASSWORD}
+      - POSTGRES_EXTRA_OPTS=-Z9 --schema=public --blobs
+      - SCHEDULE=@every 0h30m00s
+      - BACKUP_KEEP_DAYS=7
+      - BACKUP_KEEP_WEEKS=4
+      - BACKUP_KEEP_MONTHS=6
+      - HEALTHCHECK_PORT=81
+    depends_on:
+      - synapse-db
+
+#  synapse-admin:
+#    image: awesometechnologies/synapse-admin:latest
+#    container_name: synapse-admin
+#    ports:
+#      - 9090:80
+#    networks:
+#      - default
+#      - proxy
+#    depends_on:
+#      - synapse
+#    restart: unless-stopped
+
+
+networks:
+  proxy:
+    external: true
