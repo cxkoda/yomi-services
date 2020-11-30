@@ -15,13 +15,16 @@ services:
       - proxy
 
   deploy:
-    image: axiom/rsync-server
+    # Modded version in own Dockerfile to fetch google ips
+    #image: axiom/rsync-server
+    build: .
     environment:
       USERNAME: user
       PASSWORD: ${MY_IDENTITY_RSYNC_PASS} 
-      ALLOW: 0.0.0.0/0
+      #ALLOW: 0.0.0.0/0
     volumes:
       - ${APPDATA}/my-identity:/data
+      - ./my-entrypoint.sh:/my-entrypoint.sh:ro
     ports:
       - "9000:873"
     restart: unless-stopped
