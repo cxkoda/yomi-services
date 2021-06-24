@@ -1,0 +1,102 @@
+version: '3.5'
+
+services:
+
+  traefik:
+    image: traefik:v2.4
+    container_name: traefik
+    command:
+      # For debugging
+      - "--log.level=DEBUG"
+      # - "--api.insecure=true"
+
+      - "--api=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+
+      # Otherwise traefik might confuse things and try to send traffic to the wrong network (for containers in multiple networks)
+      - "--providers.docker.network=proxy"
+
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+
+      # Redirect everything to https
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+
+      # For debugging enable self signed certificates
+      - "--certificatesresolvers.selfresolver.acme.email=${ADMIN_EMAIL}"
+      - "--certificatesresolvers.selfresolver.acme.storage=/acme.json"
+      - "--certificatesresolvers.selfresolver.acme.tlschallenge=true"
+
+      # For letsencrypt certificates
+      - "--certificatesresolvers.leresolver.acme.dnschallenge=true"
+      - "--certificatesresolvers.leresolver.acme.dnschallenge.provider=cloudflare"
+      - "--certificatesresolvers.leresolver.acme.email=${ADMIN_EMAIL}"
+      - "--certificatesresolvers.leresolver.acme.storage=/letsencrypt/acme.json"
+      
+      # To fix an issue with the dns propagation checks
+      - "--certificatesresolvers.leresolver.acme.dnschallenge.resolvers=8.8.8.8:53"
+      - "--certificatesresolvers.leresolver.acme.dnschallenge.delayBeforeCheck=5"
+
+      # For testing/debugging uncomment
+      # - "--certificatesresolvers.leresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+
+      # ignore shady ssl certificates on the backend side
+      - "--serverstransport.insecureskipverify=true"
+
+    environment:
+      - CF_DNS_API_TOKEN_FILE=/run/secrets/cf_dns_api_token
+    secrets:
+      - cf_dns_api_token
+
+    ports:
+      - 80:80
+      - 443:443
+      # For debugging (if dashboard should be exposed directly)
+      # - 8080:8080
+    volumes:
+      - ${APPDATA:?err}/traefik/letsencrypt:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik_admins:/traefik_admins:ro
+
+    labels:
+      # Add secure Dashboard
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN:?err}`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.tls.certresolver=leresolver"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+
+      - "traefik.http.routers.traefik.middlewares=auth"
+      - "traefik.http.middlewares.auth.basicauth.usersfile=/traefik_admins"
+
+    networks:
+      - proxy
+
+    restart: unless-stopped
+
+  whoami:
+    image: traefik/whoami
+    container_name: simple-service
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.yomi.eu`)"
+      - "traefik.http.routers.whoami.entrypoints=websecure"
+
+      # Using self signed certificates
+      # - "traefik.http.routers.whoami.tls.certresolver=selfresolver"
+
+      - "traefik.http.routers.whoami.tls.certresolver=leresolver"
+
+    networks:
+      - proxy
+
+
+secrets:
+  cf_dns_api_token:
+    file: ${SECRETS:?err}/cf_dns_api_token
+
+networks:
+  proxy: # <== The same network defined in Docker provider config.
+    external: true

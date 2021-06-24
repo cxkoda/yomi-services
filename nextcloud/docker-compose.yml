@@ -1,4 +1,4 @@
-version: "2.1"
+version: "3.5"
 services:
   nextcloud:
     container_name: nextcloud
@@ -20,6 +20,29 @@ services:
     restart: unless-stopped
     depends_on:
       - db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nextcloud.rule=Host(`nextcloud.${DOMAIN:?err}`)"
+      - "traefik.http.routers.nextcloud.entrypoints=websecure"
+      - "traefik.http.routers.nextcloud.tls.certresolver=leresolver"
+
+      # Since this docker image only provides https access
+      - "traefik.http.services.nextcloud.loadbalancer.server.port=443"
+      - "traefik.http.services.nextcloud.loadbalancer.server.scheme=https"
+
+      # This didn't work -> enabling insecureSkipVerify globally for traefik instead
+      # - "traefik.http.serversTransports.myinsecure.loadbalancer.insecureSkipVerify=true"
+      # - "traefik.http.services.nextcloud.loadbalancer.serversTransport=myinsecure"
+
+      # drop redirect
+      - "traefik.http.routers.drop.rule=Host(`drop.${DOMAIN}`)"
+      - "traefik.http.routers.drop.entrypoints=websecure"
+      - "traefik.http.routers.drop.tls.certresolver=leresolver"
+
+      - "traefik.http.middlewares.drop-redirect.redirectregex.regex=^https://drop.yomi.eu/(.*)"
+      - "traefik.http.middlewares.drop-redirect.redirectregex.replacement=https://nextcloud.yomi.eu/s/w7iXZ37pJKbsGEi"
+      - "traefik.http.middlewares.drop-redirect.redirectregex.permanent=true"
+      - "traefik.http.routers.drop.middlewares=drop-redirect"
 
   db:
     image: linuxserver/mariadb

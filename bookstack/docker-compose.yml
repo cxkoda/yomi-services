@@ -1,4 +1,4 @@
-version: '3'
+version: '3.5'
 
 services:
 
@@ -37,6 +37,12 @@ services:
     restart: unless-stopped
     depends_on:
       - db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bookstack.rule=Host(`bookstack.${DOMAIN:?err}`)"
+      - "traefik.http.routers.bookstack.entrypoints=websecure"
+      - "traefik.http.routers.bookstack.tls.certresolver=leresolver"
+
 
   db-backup:
     image: mariadb:10

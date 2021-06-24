@@ -22,6 +22,12 @@ services:
     restart: unless-stopped
     depends_on:
       - synapse-db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.synapse.loadbalancer.server.port=8008"
+      - "traefik.http.routers.synapse.rule=Host(`matrix.${DOMAIN:?err}`)"
+      - "traefik.http.routers.synapse.entrypoints=websecure"
+      - "traefik.http.routers.synapse.tls.certresolver=leresolver"
 
 
   synapse-db:

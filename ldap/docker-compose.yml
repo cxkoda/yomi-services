@@ -47,17 +47,24 @@ services:
       - proxy
       - ldap
 
-#  phpldapadmin:
-#    image: osixia/phpldapadmin:latest
-#    container_name: phpldapadmin
-#    environment:
-#      PHPLDAPADMIN_LDAP_HOSTS: "openldap"
-#      PHPLDAPADMIN_HTTPS: "false"
-#    depends_on:
-#      - openldap
-#    networks:
-#      - proxy
-#      - ldap
+  phpldapadmin:
+    image: osixia/phpldapadmin:latest
+    container_name: phpldapadmin
+    environment:
+      PHPLDAPADMIN_LDAP_HOSTS: "openldap"
+      PHPLDAPADMIN_HTTPS: "false"
+    depends_on:
+      - openldap
+    networks:
+      - proxy
+      - ldap
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.phpldapadmin.rule=Host(`phpldapadmin.${DOMAIN:?err}`)"
+      - "traefik.http.routers.phpldapadmin.tls.certresolver=leresolver"
+      - "traefik.http.routers.phpldapadmin.entrypoints=websecure"
+      - "traefik.http.routers.phpldapadmin.middlewares=auth"
+
 
   lum:
     image: wheelybird/ldap-user-manager:latest
@@ -69,7 +76,7 @@ services:
       #LDAP_REQUIRE_STARTTLS: "false"
       #LDAP_TLS_CACERT: "/ldap.crt"
       LDAP_ADMINS_GROUP: "admin"
-      LDAP_ADMIN_BIND_DN: "cn=admin,${LDAP_BASE_DN:-dc=yomi,dc=eu}"
+      LDAP_ADMIN_BIND_DN: "${LDAP_ADMIN_DN:-cn=admin,dc=yomi,dc=eu}"
       LDAP_ADMIN_BIND_PWD: ${LDAP_ADMIN_PASSWORD:-admin}
       #LDAP_USES_NIS_SCHEMA: "false"
       NO_HTTPS: "true"
@@ -81,6 +88,11 @@ services:
     networks:
       - proxy
       - ldap
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.lum.rule=Host(`lum.${DOMAIN:?err}`)"
+      - "traefik.http.routers.lum.entrypoints=websecure"
+      - "traefik.http.routers.lum.tls.certresolver=leresolver"
 
 networks:
   proxy:

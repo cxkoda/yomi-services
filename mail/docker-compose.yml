@@ -1,13 +1,12 @@
-version: '2'
+version: '3.5'
 services:
   mail:
-    image: tvial/docker-mailserver:latest
+    image: mailserver/docker-mailserver:latest
     hostname: ${MAIL_HOSTNAME}
     domainname: ${DOMAIN}
     container_name: mail
     ports:
     - "25:25"
-    - "143:143"
     - "587:587"
     - "993:993"
     volumes:
@@ -15,11 +14,72 @@ services:
     - ${APPDATA}/mail/mailstate:/var/mail-state
     - ${APPDATA}/mail/maillogs:/var/log/mail
     - ${APPDATA}/mail/config/:/tmp/docker-mailserver/
-    - ${APPDATA}/swag/etc/letsencrypt:/etc/letsencrypt
+    - ${APPDATA}/mail/swag/etc/letsencrypt:/etc/letsencrypt
     env_file:
     - .env
-    - env-mailserver
+    # - env-mailserver
     cap_add:
     - NET_ADMIN
     - SYS_PTRACE
     restart: unless-stopped
+    environment:
+      - PERMIT_DOCKER=network
+      - SSL_TYPE=letsencrypt
+      - ONE_DIR=1
+      - DMS_DEBUG=1
+      - SPOOF_PROTECTION=1
+      - REPORT_RECIPIENT=1
+      - ENABLE_FAIL2BAN=1
+      - ENABLE_POSTGREY=0
+      - ENABLE_SPAMASSASSIN=0
+    depends_on:
+      - swag
+
+  # To generate ssl certificates
+  swag:
+    image: linuxserver/swag
+    environment:
+      - PUID
+      - PGID
+      - TZ
+      - URL=${DOMAIN:?err}
+      - SUBDOMAINS=${MAIL_HOSTNAME}
+      - VALIDATION=${SWAG_VALIDATION:?err}
+      - DNSPLUGIN=${SWAG_DNSPLUGIN} #optional
+      #- PROPAGATION= #optional
+      #- DUCKDNSTOKEN= #optional
+      - EMAIL=${ADMIN_EMAIL} #optional
+      - ONLY_SUBDOMAINS=true #optional
+      #- EXTRA_DOMAINS= #optional
+      #- STAGING=false #optional
+    volumes:
+      - ${SECRETS:?err}/swag_dns_conf.ini:/config/dns-conf/${SWAG_DNSPLUGIN}.ini
+      - ${APPDATA:?err}/mail/swag:/config
+    restart: unless-stopped
+
+  autodiscover:
+    image: monogramm/autodiscover-email-settings:latest
+    container_name: autodiscover
+    environment:
+      - COMPANY_NAME=yomi
+      - SUPPORT_URL=https://autodiscover.${DOMAIN}
+      - DOMAIN=${DOMAIN}
+      # IMAP configuration (host mandatory to enable)
+      - IMAP_HOST=mail.${DOMAIN}
+      - IMAP_PORT=993
+      - IMAP_SOCKET=SSL
+      # SMTP configuration (host mandatory to enable)
+      - SMTP_HOST=mail.${DOMAIN}
+      - SMTP_PORT=587
+      - SMTP_SOCKET=STARTTLS
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.autodiscover.rule=Host(`autodiscover.${DOMAIN:?err}`) || Host(`autoconfig.${DOMAIN:?err}`)"
+      - "traefik.http.routers.autodiscover.entrypoints=websecure"
+      - "traefik.http.routers.autodiscover.tls.certresolver=leresolver"
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: True

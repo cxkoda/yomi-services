@@ -1,14 +1,6 @@
 version: '3'
 
 services:
-#  app:
-#    image: afterlogic/docker-webmail-lite
-#    container_name: webmail
-#    networks:
-#      - proxy
-#    restart: unless-stopped
-
-
   app:
     image: roundcube/roundcubemail
     container_name: webmail
@@ -25,6 +17,11 @@ services:
     networks:
       - proxy
     restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.webmail.rule=Host(`webmail.${DOMAIN:?err}`)"
+      - "traefik.http.routers.webmail.tls.certresolver=leresolver"
+      - "traefik.http.routers.webmail.entrypoints=websecure"
 
   db:
     image: linuxserver/mariadb
