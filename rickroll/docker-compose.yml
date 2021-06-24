@@ -1,0 +1,26 @@
+version: '3.5'
+
+services:
+  app:
+    image: linuxserver/nginx
+    container_name: rickroll
+    environment:
+      - PUID
+      - PGID
+      - TZ
+    volumes:
+      - ./www:/config/www
+    restart: unless-stopped
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.rickroll.rule=Host(`nggyu.${DOMAIN:?err}`) || Host(`nggyu.${VC_DOMAIN:?err}`)"
+      - "traefik.http.routers.rickroll.entrypoints=websecure"
+      - "traefik.http.routers.rickroll.tls.certresolver=leresolver"
+
+networks:
+  proxy:
+    external: true
+
+
