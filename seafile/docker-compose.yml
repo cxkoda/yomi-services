@@ -1,0 +1,51 @@
+version: '3.5'
+
+services:
+  db:
+    image: mariadb:10.5
+    container_name: seafile-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${SEAFILE_DB_ROOT_PASSWORD:?err}  # Requested, set the root's password of MySQL service.
+      - MYSQL_LOG_CONSOLE=true
+    volumes:
+      - ${APPDATA}/seafile/db:/var/lib/mysql  # Requested, specifies the path to MySQL data persistent store.
+    networks:
+      - default
+
+  memcached:
+    image: memcached:1.5.6
+    container_name: seafile-memcached
+    entrypoint: memcached -m 256
+    networks:
+      - default
+          
+  seafile:
+    image: seafileltd/seafile-mc:latest
+    container_name: seafile
+    volumes:
+      - ${APPDATA}/seafile/app/:/shared   # Requested, specifies the path to Seafile data persistent store.
+    environment:
+      - DB_HOST=db
+      - DB_ROOT_PASSWD=${SEAFILE_DB_ROOT_PASSWORD:?err}  # Requested, the value shuold be root's password of MySQL service.
+      - TIME_ZONE=${TZ}  # Optional, default is UTC. Should be uncomment and set to your local time zone.
+      - SEAFILE_ADMIN_EMAIL=${ADMIN_EMAIL} # Specifies Seafile admin user, default is 'me@example.com'.
+      - SEAFILE_ADMIN_PASSWORD=${SEAFILE_ADMIN_PASSWORD:?err}  # Specifies Seafile admin password, default is 'asecret'.
+    depends_on:
+      - db
+      - memcached
+    networks:
+      - proxy
+      - ldap
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.seafile.rule=Host(`seafile.${DOMAIN:?err}`)"
+      - "traefik.http.routers.seafile.entrypoints=websecure"
+      - "traefik.http.routers.seafile.tls.certresolver=leresolver"
+      
+networks:
+  proxy:
+    external: true
+  ldap:
+    external: true
+
