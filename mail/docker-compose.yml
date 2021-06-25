@@ -1,26 +1,26 @@
 version: '3.5'
 services:
   mail:
-    image: mailserver/docker-mailserver:latest
+    image: mailserver/docker-mailserver:edge
     hostname: ${MAIL_HOSTNAME}
     domainname: ${DOMAIN}
     container_name: mail
     ports:
-    - "25:25"
-    - "587:587"
-    - "993:993"
+      - "25:25"
+      - "465:465"
+      - "993:993"
     volumes:
-    - ${APPDATA}/mail/maildata:/var/mail
-    - ${APPDATA}/mail/mailstate:/var/mail-state
-    - ${APPDATA}/mail/maillogs:/var/log/mail
-    - ${APPDATA}/mail/config/:/tmp/docker-mailserver/
-    - ${APPDATA}/mail/swag/etc/letsencrypt:/etc/letsencrypt
+      - ${APPDATA}/mail/maildata:/var/mail
+      - ${APPDATA}/mail/mailstate:/var/mail-state
+      - ${APPDATA}/mail/maillogs:/var/log/mail
+      - ${APPDATA}/mail/config/:/tmp/docker-mailserver/
+      - ${APPDATA}/mail/swag/etc/letsencrypt:/etc/letsencrypt
     env_file:
-    - .env
-    # - env-mailserver
+      - .env
+      # - env-mailserver
     cap_add:
-    - NET_ADMIN
-    - SYS_PTRACE
+      - NET_ADMIN
+      - SYS_PTRACE
     restart: unless-stopped
     environment:
       - PERMIT_DOCKER=network
@@ -32,6 +32,7 @@ services:
       - ENABLE_FAIL2BAN=1
       - ENABLE_POSTGREY=0
       - ENABLE_SPAMASSASSIN=0
+      - POSTFIX_MESSAGE_SIZE_LIMIT=40960000
     depends_on:
       - swag
 
@@ -70,11 +71,11 @@ services:
       - IMAP_SOCKET=SSL
       # SMTP configuration (host mandatory to enable)
       - SMTP_HOST=mail.${DOMAIN}
-      - SMTP_PORT=587
-      - SMTP_SOCKET=STARTTLS
+      - SMTP_PORT=465
+      - SMTP_SOCKET=SSL
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.autodiscover.rule=Host(`autodiscover.${DOMAIN:?err}`) || Host(`autoconfig.${DOMAIN:?err}`)"
+      - "traefik.http.routers.autodiscover.rule=Host(`autodiscover.${DOMAIN:?err}`) || Host(`autoconfig.${DOMAIN:?err}`) || Host(`autodiscover.${VC_DOMAIN:?err}`) || Host(`autoconfig.${VC_DOMAIN:?err}`)"
       - "traefik.http.routers.autodiscover.entrypoints=websecure"
       - "traefik.http.routers.autodiscover.tls.certresolver=leresolver"
     networks:
