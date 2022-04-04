@@ -1,0 +1,33 @@
+version: '3.5'
+
+services:
+  app:
+    image: linuxserver/nginx
+    container_name: yomi-web
+    environment:
+      - PUID
+      - PGID
+      - TZ
+    volumes:
+      - ${APPDATA}/yomi:/config    
+      - ./www:/config/www
+    restart: unless-stopped
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.yomi.rule=Host(`${DOMAIN:?err}`)"
+      - "traefik.http.routers.yomi.entrypoints=websecure"
+      - "traefik.http.routers.yomi.tls.certresolver=leresolver"
+
+      # define: www.david-huber.eu -> david-huber.eu
+      - "traefik.http.middlewares.yomi-redirect-www.redirectregex.regex=^https://www.yomi.eu/(.*)"
+      - "traefik.http.middlewares.yomi-redirect-www.redirectregex.replacement=https://yomi.eu/$${1}"
+      - "traefik.http.middlewares.yomi-redirect-www.redirectregex.permanent=true"
+
+      # add redirects
+      - "traefik.http.routers.yomi.middlewares=yomi-redirect-www"
+
+networks:
+  proxy:
+    external: true
